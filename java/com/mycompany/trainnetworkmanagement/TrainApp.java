@@ -15,31 +15,29 @@ import com.mxgraph.layout.mxFastOrganicLayout;
 
 public class TrainApp {
 
-  
-    private static final Color BLUE_DARK = Color.decode("#1A252F");     
+    private static final Color BLUE_DARK = Color.decode("#1A252F");
     private static final Color BLUE_BUTTON = Color.decode("#2C3E50");    
-    private static final Color BLUE_LIGHT = Color.decode("#1A252F");    
+    private static final Color BLUE_LIGHT = Color.decode("#1A252F");
     private static final Color BACKGROUND_COLOR = Color.decode("#ECF0F1"); 
     private static final Color WHITE = Color.WHITE;
-
     private static final Graph trainGraph = new Graph();
-    
     
     private static JComboBox<String> srcCombo = new JComboBox<>();
     private static JComboBox<String> destCombo = new JComboBox<>();
     private static JComboBox<String> edgeSrcCombo = new JComboBox<>();
     private static JComboBox<String> edgeDestCombo = new JComboBox<>();
     private static JComboBox<String> deleteStationCombo = new JComboBox<>();
-    
     private static JPanel graphContainerPanel = new JPanel(new BorderLayout());
     private static JLabel statusBar = new JLabel(" Ready");
     private static JTextArea nodeInfoArea = new JTextArea();
+    
+    private static boolean shouldApplyLayout = true;
+    private static java.util.Map<String, Point> savedNodePositions = new java.util.HashMap<>();
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(TrainApp::showSplashScreen);
     }
 
-    
     private static void showSplashScreen() {
         JWindow splash = new JWindow();
         splash.setSize(700, 450);
@@ -50,7 +48,6 @@ public class TrainApp {
         JPanel bluePanel = new JPanel(new GridBagLayout());
         bluePanel.setBackground(BLUE_DARK);
         bluePanel.setPreferredSize(new Dimension(280, 450));
-        
         java.net.URL gifURL = TrainApp.class.getResource("/Train.gif");
         JLabel gifLabel = (gifURL != null) ? new JLabel(new ImageIcon(gifURL)) : new JLabel("🚂 Train System");
         gifLabel.setForeground(WHITE);
@@ -78,7 +75,6 @@ public class TrainApp {
         timer.start();
     }
 
-    
     private static void showMainFrame() {
         JFrame mainFrame = new JFrame("Train Network Management System ");
         mainFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -95,7 +91,6 @@ public class TrainApp {
         statusBar.setFont(new Font("Segoe UI", Font.BOLD, 12));
         mainPanel.add(statusBar, BorderLayout.SOUTH);
 
-        
         JPanel sidebar = new JPanel();
         sidebar.setLayout(new GridBagLayout()); 
         sidebar.setBackground(BLUE_DARK);
@@ -105,8 +100,6 @@ public class TrainApp {
         sGbc.fill = GridBagConstraints.HORIZONTAL;
         sGbc.gridx = 0;
         sGbc.weightx = 1.0;
-
-       
         JLabel menuTitle = new JLabel("MAIN MENU", SwingConstants.CENTER);
         menuTitle.setFont(new Font("Segoe UI", Font.BOLD, 20));
         menuTitle.setForeground(WHITE);
@@ -114,7 +107,6 @@ public class TrainApp {
         sGbc.gridy = 0;
         sidebar.add(menuTitle, sGbc);
 
-        
         JButton btnGraph = createSidebarButton("Interactive Graph");
         JButton btnEdit = createSidebarButton("Edit Network");
         JButton btnAlgorithms = createSidebarButton("Algorithms");
@@ -125,14 +117,17 @@ public class TrainApp {
         sGbc.gridy = 3; sidebar.add(btnAlgorithms, sGbc);
         sGbc.gridy = 4; sidebar.add(btnReports, sGbc);
 
-       
         JPanel spacer = new JPanel();
         spacer.setOpaque(false);
         sGbc.gridy = 5;
         sGbc.weighty = 1.0;
         sidebar.add(spacer, sGbc);
 
-        btnGraph.addActionListener(e -> { cardLayout.show(contentCardPanel, "GraphView"); updateVisualGraph(null); });
+        btnGraph.addActionListener(e -> { 
+            cardLayout.show(contentCardPanel, "GraphView"); 
+            shouldApplyLayout = true;
+            updateVisualGraph(null); 
+        });
         btnEdit.addActionListener(e -> cardLayout.show(contentCardPanel, "EditView"));
         btnAlgorithms.addActionListener(e -> cardLayout.show(contentCardPanel, "AlgoView"));
         btnReports.addActionListener(e -> cardLayout.show(contentCardPanel, "ReportView"));
@@ -149,10 +144,10 @@ public class TrainApp {
         mainFrame.setVisible(true);
 
         updateAllCombos();
+        shouldApplyLayout = true;
         updateVisualGraph(null);
     }
 
-    
     private static JPanel createGraphPage() {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBackground(BACKGROUND_COLOR);
@@ -160,7 +155,6 @@ public class TrainApp {
         JPanel topSearchPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 10));
         topSearchPanel.setBackground(WHITE);
         topSearchPanel.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, Color.LIGHT_GRAY));
-
         JLabel searchLabel = new JLabel("Search Station:");
         searchLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
         JTextField searchField = new JTextField(15);
@@ -169,16 +163,22 @@ public class TrainApp {
 
         searchBtn.addActionListener(e -> {
             String name = searchField.getText().trim();
-            if(!name.isEmpty()) updateVisualGraph(name);
+            if(!name.isEmpty()) {
+                shouldApplyLayout = true;
+                updateVisualGraph(name);
+            }
         });
-        resetBtn.addActionListener(e -> { searchField.setText(""); updateVisualGraph(null); });
+        resetBtn.addActionListener(e -> { 
+            searchField.setText(""); 
+            shouldApplyLayout = true;
+            updateVisualGraph(null); 
+        });
 
         topSearchPanel.add(searchLabel);
         topSearchPanel.add(searchField);
         topSearchPanel.add(searchBtn);
         topSearchPanel.add(resetBtn);
 
-        
         JPanel infoPanel = new JPanel(new BorderLayout());
         infoPanel.setPreferredSize(new Dimension(260, 600));
         infoPanel.setBackground(WHITE);
@@ -198,11 +198,9 @@ public class TrainApp {
         panel.add(topSearchPanel, BorderLayout.NORTH);
         panel.add(graphContainerPanel, BorderLayout.CENTER);
         panel.add(infoPanel, BorderLayout.EAST);
-
         return panel;
     }
 
-    
     private static JPanel createEditPage() {
         JPanel panel = new JPanel(new BorderLayout(15, 15));
         panel.setBackground(BACKGROUND_COLOR);
@@ -211,8 +209,6 @@ public class TrainApp {
         JPanel container = new JPanel();
         container.setLayout(new BoxLayout(container, BoxLayout.Y_AXIS));
         container.setOpaque(false);
-
-
         JPanel stationAddPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 15));
         stationAddPanel.setBorder(BorderFactory.createTitledBorder(" Add Station"));
         stationAddPanel.setBackground(WHITE);
@@ -221,7 +217,6 @@ public class TrainApp {
         JTextField nameField = new JTextField(12);
         JTextField codeField = new JTextField(6);
         JButton addBtn = createStyledButton("Add Station");
-        
         addBtn.addActionListener(e -> {
             String name = nameField.getText().trim();
             String code = codeField.getText().trim();
@@ -234,6 +229,7 @@ public class TrainApp {
                 JOptionPane.showMessageDialog(panel, " Station [" + name + "] added successfully.");
                 nameField.setText(""); codeField.setText("");
                 updateAllCombos();
+                shouldApplyLayout = true;
                 updateVisualGraph(null);
             } else {
                 showStatus(" Failed! Station already exists.", true);
@@ -255,16 +251,17 @@ public class TrainApp {
             Station target = trainGraph.getStationByName(selectedName);
             if(target != null) {
                 trainGraph.removeStation(target);
+                savedNodePositions.remove(selectedName);
                 showStatus("🗑️ Station [" + selectedName + "] deleted successfully.", false);
                 JOptionPane.showMessageDialog(panel, "️ Station [" + selectedName + "] and all its tracks deleted successfully.");
                 updateAllCombos();
+                shouldApplyLayout = false;
                 updateVisualGraph(null);
             }
         });
         stationDeletePanel.add(new JLabel("Select Station to Remove:"));
         stationDeletePanel.add(deleteStationCombo);
         stationDeletePanel.add(deleteStationBtn);
-
 
         JPanel edgePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 15));
         edgePanel.setBorder(BorderFactory.createTitledBorder("Manage & Edit Edges"));
@@ -274,7 +271,6 @@ public class TrainApp {
         JTextField weightField = new JTextField(6);
         JButton addEdgeBtn = createStyledButton("Add/Update Edge");
         JButton removeEdgeBtn = createStyledButton("Remove Edge");
-
         addEdgeBtn.addActionListener(e -> {
             if(edgeSrcCombo.getSelectedItem() == null || edgeDestCombo.getSelectedItem() == null) return;
             Station src = trainGraph.getStationByName((String) edgeSrcCombo.getSelectedItem());
@@ -286,6 +282,7 @@ public class TrainApp {
                     showStatus("Path established/updated successfully.", false);
                     JOptionPane.showMessageDialog(panel, "Path linked from [" + src.getName() + "] to [" + dest.getName() + "] (" + weight + " km).");
                     weightField.setText("");
+                    shouldApplyLayout = false;
                     updateVisualGraph(null);
                 }
             } catch (NumberFormatException ex) {
@@ -300,6 +297,7 @@ public class TrainApp {
             if(trainGraph.removeEdge(src, dest)) {
                 showStatus(" Removed edge successfully.", false);
                 JOptionPane.showMessageDialog(panel, "️ Path between [" + src.getName() + "] and [" + dest.getName() + "] removed.");
+                shouldApplyLayout = false;
                 updateVisualGraph(null);
             } else {
                 showStatus("️ No existing direct path found to remove.", true);
@@ -328,7 +326,6 @@ public class TrainApp {
         JTabbedPane algoTabs = new JTabbedPane();
         algoTabs.setFont(new Font("Segoe UI", Font.BOLD, 15)); 
 
-        
         JPanel pathPanel = new JPanel(new BorderLayout(15, 15));
         pathPanel.setBackground(WHITE);
         pathPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
@@ -367,13 +364,11 @@ public class TrainApp {
         pathPanel.add(pathControl, BorderLayout.NORTH);
         pathPanel.add(new JScrollPane(pathResultArea), BorderLayout.CENTER);
 
-        
         JPanel cyclePanel = new JPanel(new GridBagLayout());
         cyclePanel.setBackground(WHITE);
         JButton checkCycleBtn = createStyledButton("Run Network Cycle Detection");
         JLabel cycleResultLabel = new JLabel("Status: Awaiting Scan", SwingConstants.CENTER);
         cycleResultLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
-
         checkCycleBtn.addActionListener(e -> {
             boolean hasCycle = trainGraph.ifTheGraphHasCycle();
             if(hasCycle) {
@@ -389,7 +384,6 @@ public class TrainApp {
         cGbc.gridx = 0; cGbc.gridy = 0; cyclePanel.add(checkCycleBtn, cGbc);
         cGbc.gridy = 1; cyclePanel.add(cycleResultLabel, cGbc);
 
-        
         JPanel sortPanel = new JPanel(new BorderLayout(10, 10));
         sortPanel.setBackground(WHITE);
         sortPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
@@ -399,7 +393,6 @@ public class TrainApp {
         sortTable.setRowHeight(25);
         sortTable.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         JButton loadSortedBtn = createStyledButton(" Load & Sort Stations Dense Layout");
-
         loadSortedBtn.addActionListener(e -> {
             tableModel.setRowCount(0);
             ArrayList<Station> sorted = trainGraph.stationsOrderedByNumOfEdges();
@@ -419,7 +412,6 @@ public class TrainApp {
         return panel;
     }
 
-   
     private static JPanel createReportsPage() {
         JPanel panel = new JPanel(new BorderLayout(20, 20));
         panel.setBackground(BACKGROUND_COLOR);
@@ -427,7 +419,6 @@ public class TrainApp {
 
         JPanel dashboardPanel = new JPanel(new GridLayout(1, 3, 20, 20));
         dashboardPanel.setBackground(BACKGROUND_COLOR);
-
         JPanel card1 = createReportCard("Total Stations", "0");
         JPanel card2 = createReportCard("Total Rails Paths", "0");
         JPanel card3 = createReportCard("Network Typology", "Directed");
@@ -439,23 +430,21 @@ public class TrainApp {
         JPanel fileIOPanel = new JPanel(new GridLayout(2, 2, 20, 20)); 
         fileIOPanel.setBackground(WHITE);
         fileIOPanel.setBorder(BorderFactory.createTitledBorder(" Text File & Image Persistence Control Centre"));
-
         JButton importBtn = createStyledButton(" Import Network Text File");
         JButton exportBtn = createStyledButton(" Export Network Text File");
         JButton saveImageBtn = createStyledButton("️ Save Graph to PNG ");
         JButton refreshReportBtn = createStyledButton(" Refresh System Counters");
-
         importBtn.addActionListener(e -> {
             JFileChooser chooser = new JFileChooser();
             if (chooser.showOpenDialog(panel) == JFileChooser.APPROVE_OPTION) {
                 File file = chooser.getSelectedFile();
                 trainGraph.Import(file.getAbsolutePath());
                 updateAllCombos();
+                shouldApplyLayout = true;
                 updateVisualGraph(null);
                 showStatus(" Successfully loaded network from text data source.", false);
             }
         });
-
         exportBtn.addActionListener(e -> {
             JFileChooser chooser = new JFileChooser();
             chooser.setSelectedFile(new File("railway_network.txt"));
@@ -467,7 +456,6 @@ public class TrainApp {
                 showStatus(" Exported network topology successfully.", false);
             }
         });
-
         saveImageBtn.addActionListener(e -> {
             JFileChooser saveChooser = new JFileChooser();
             saveChooser.setSelectedFile(new File("train_network_render.png"));
@@ -484,7 +472,6 @@ public class TrainApp {
                 }
             }
         });
-
         refreshReportBtn.addActionListener(e -> {
             int stationsCount = trainGraph.getStations().size();
             int edgesCount = 0;
@@ -495,7 +482,6 @@ public class TrainApp {
             ((JLabel) card2.getComponent(1)).setText(String.valueOf(edgesCount));
             showStatus(" Dashboard counters synchronized.", false);
         });
-
         fileIOPanel.add(importBtn); fileIOPanel.add(exportBtn);
         fileIOPanel.add(saveImageBtn); fileIOPanel.add(refreshReportBtn);
 
@@ -504,10 +490,8 @@ public class TrainApp {
         return panel;
     }
 
-    
     private static void updateVisualGraph(String highlightNodeName) {
         graphContainerPanel.removeAll();
-
         mxGraph mxGraphInstance = new mxGraph() {
             @Override
             public boolean isCellEditable(Object cell) { return false; }
@@ -517,19 +501,25 @@ public class TrainApp {
         mxGraphInstance.getModel().beginUpdate();
 
         java.util.Map<Station, Object> vertexMap = new java.util.HashMap<>();
-
         try {
-           
             for (Station station : trainGraph.graph.keySet()) {
                 String style = "shape=ellipse;fillColor=#579fd6;strokeColor=#3FABF2;fontColor=white;fontSize=13;fontStyle=1";
                 if (highlightNodeName != null && station.getName().equalsIgnoreCase(highlightNodeName)) {
                     style = "shape=ellipse;fillColor=#F39C12;strokeColor=#D35400;fontColor=white;fontSize=14;fontStyle=1";
                 }
-                Object vertex = mxGraphInstance.insertVertex(graphParent, null, station.getName(), 0, 0, 115, 50, style);
+                
+                int posX = 0;
+                int posY = 0;
+                if (!shouldApplyLayout && savedNodePositions.containsKey(station.getName())) {
+                    Point p = savedNodePositions.get(station.getName());
+                    posX = p.x;
+                    posY = p.y;
+                }
+                
+                Object vertex = mxGraphInstance.insertVertex(graphParent, null, station.getName(), posX, posY, 115, 50, style);
                 vertexMap.put(station, vertex);
             }
 
-           
             for (java.util.Map.Entry<Station, java.util.List<Edge>> entry : trainGraph.graph.entrySet()) {
                 Station source = entry.getKey();
                 Object sourceVertex = vertexMap.get(source);
@@ -546,43 +536,94 @@ public class TrainApp {
             mxGraphInstance.getModel().endUpdate();
         }
 
-        mxFastOrganicLayout layout = new mxFastOrganicLayout(mxGraphInstance);
-        layout.setForceConstant(160); 
-        layout.execute(graphParent);
+        if (shouldApplyLayout) {
+            mxFastOrganicLayout layout = new mxFastOrganicLayout(mxGraphInstance);
+            layout.setForceConstant(160); 
+            layout.execute(graphParent);
+            
+            for (Station station : trainGraph.graph.keySet()) {
+                Object cell = vertexMap.get(station);
+                if (cell != null) {
+                    com.mxgraph.model.mxGeometry g = mxGraphInstance.getModel().getGeometry(cell);
+                    if (g != null) {
+                        savedNodePositions.put(station.getName(), new Point((int)g.getX(), (int)g.getY()));
+                    }
+                }
+            }
+        }
 
         mxGraphComponent graphComponent = new mxGraphComponent(mxGraphInstance);
         graphComponent.getViewport().setBackground(Color.WHITE);
         graphComponent.setBorder(BorderFactory.createEmptyBorder());
+        
+        graphComponent.setCenterZoom(true);
+        SwingUtilities.invokeLater(() -> {
+            graphComponent.zoomAndCenter();
+        });
 
         graphComponent.getGraphControl().addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent event) {
                 Object cell = graphComponent.getCellAt(event.getX(), event.getY());
-                if (cell != null && mxGraphInstance.getModel().isVertex(cell)) {
-                    String label = mxGraphInstance.getLabel(cell);
-                    Station target = trainGraph.getStationByName(label);
-                    
-                    if (target != null) {
-                        int connectionCount = trainGraph.numOfEdgesOfEveryStation(target);
-                        StringBuilder infoText = new StringBuilder();
-                        infoText.append("Station Name: ").append(target.getName()).append("\n");
-                        infoText.append("Station Code: ").append(target.getCode()).append("\n");
-                        infoText.append("Active Edges: ").append(connectionCount).append("\n\n");
-                        infoText.append("Direct Destinations:\n");
+                if (cell != null) {
+                    if (mxGraphInstance.getModel().isVertex(cell)) {
+                        String label = mxGraphInstance.getLabel(cell);
+                        Station target = trainGraph.getStationByName(label);
                         
-                        List<Edge> edges = trainGraph.getGraph().get(target);
-                        if(edges != null) {
-                            for(Edge eg : edges) {
-                                infoText.append(" ➔ ").append(eg.getDestination().getName())
-                                        .append(" (").append(eg.getDistance()).append(" km)\n");
+                        if (target != null) {
+                            int connectionCount = trainGraph.numOfEdgesOfEveryStation(target);
+                            StringBuilder infoText = new StringBuilder();
+                            infoText.append("Station Name: ").append(target.getName()).append("\n");
+                            infoText.append("Station Code: ").append(target.getCode()).append("\n");
+                            infoText.append("Active Edges: ").append(connectionCount).append("\n\n");
+                            infoText.append("Direct Destinations:\n");
+                            List<Edge> edges = trainGraph.getGraph().get(target);
+                            if(edges != null) {
+                                for(Edge eg : edges) {
+                                    infoText.append(" ➔ ").append(eg.getDestination().getName())
+                                             .append(" (").append(eg.getDistance()).append(" km)\n");
+                                }
+                            }
+                            nodeInfoArea.setText(infoText.toString());
+
+                            int response = JOptionPane.showConfirmDialog(graphComponent, 
+                                    "Do you want to delete station [" + target.getName() + "] and all its connections?", 
+                                    "Confirm Deletion", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+                            if (response == JOptionPane.YES_OPTION) {
+                                trainGraph.removeStation(target);
+                                savedNodePositions.remove(target.getName());
+                                showStatus("Station [" + target.getName() + "] deleted.", false);
+                                updateAllCombos();
+                                shouldApplyLayout = false;
+                                updateVisualGraph(null);
                             }
                         }
-                        nodeInfoArea.setText(infoText.toString());
+                    } else if (mxGraphInstance.getModel().isEdge(cell)) {
+                        Object sourceCell = mxGraphInstance.getModel().getTerminal(cell, true);
+                        Object destCell = mxGraphInstance.getModel().getTerminal(cell, false);
+                        if (sourceCell != null && destCell != null) {
+                            String srcLabel = mxGraphInstance.getLabel(sourceCell);
+                            String destLabel = mxGraphInstance.getLabel(destCell);
+                            Station srcStation = trainGraph.getStationByName(srcLabel);
+                            Station destStation = trainGraph.getStationByName(destLabel);
+                            
+                            if (srcStation != null && destStation != null) {
+                                int response = JOptionPane.showConfirmDialog(graphComponent, 
+                                        "Do you want to delete the rail path from [" + srcLabel + "] to [" + destLabel + "]?", 
+                                        "Confirm Path Deletion", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+                                if (response == JOptionPane.YES_OPTION) {
+                                    if (trainGraph.removeEdge(srcStation, destStation)) {
+                                        showStatus("Path from [" + srcLabel + "] to [" + destLabel + "] removed.", false);
+                                        shouldApplyLayout = false;
+                                        updateVisualGraph(null);
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
         });
-
         graphContainerPanel.add(graphComponent, BorderLayout.CENTER);
         graphContainerPanel.revalidate();
         graphContainerPanel.repaint();
@@ -590,6 +631,7 @@ public class TrainApp {
 
     private static void highlightVisualPath(List<Station> pathStations) {
         if(pathStations == null || pathStations.size() < 2) return;
+        shouldApplyLayout = false;
         updateVisualGraph(null);
         
         mxGraphComponent comp = (mxGraphComponent) graphContainerPanel.getComponent(0);
@@ -615,13 +657,14 @@ public class TrainApp {
         graphContainerPanel.repaint();
     }
 
-   
     private static void updateAllCombos() {
-        srcCombo.removeAllItems(); destCombo.removeAllItems();
+        srcCombo.removeAllItems();
+        destCombo.removeAllItems();
         edgeSrcCombo.removeAllItems(); edgeDestCombo.removeAllItems();
         deleteStationCombo.removeAllItems();
         for(Station s : trainGraph.getStations()) {
-            srcCombo.addItem(s.getName()); destCombo.addItem(s.getName());
+            srcCombo.addItem(s.getName());
+            destCombo.addItem(s.getName());
             edgeSrcCombo.addItem(s.getName()); edgeDestCombo.addItem(s.getName());
             deleteStationCombo.addItem(s.getName());
         }
@@ -638,7 +681,6 @@ public class TrainApp {
         card.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(Color.LIGHT_GRAY, 1),
                 BorderFactory.createEmptyBorder(15, 15, 15, 15)));
-        
         JLabel titleLbl = new JLabel(title, SwingConstants.CENTER);
         titleLbl.setFont(new Font("Segoe UI", Font.BOLD, 14));
         titleLbl.setForeground(Color.GRAY);
@@ -659,7 +701,6 @@ public class TrainApp {
         btn.setFocusPainted(false);
         btn.setBorder(BorderFactory.createEmptyBorder(18, 10, 18, 10));
         btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-
         btn.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseEntered(MouseEvent e) { btn.setBackground(BLUE_BUTTON.brighter()); }
