@@ -162,34 +162,42 @@ public class Graph {
     }
     
     public static void drawFromFile(String filePath, String outputFile) throws IOException {
-        StringBuilder dot = new StringBuilder();
-        dot.append("digraph G {\n");
-        for (String line : Files.readAllLines(Paths.get(filePath))) {
-            line = line.trim();
-            if (line.isEmpty())
-                continue;
-            String[] parts = line.split("->");
-            if (parts.length != 2)
-                continue;
-            String source = parts[0].trim();
-            dot.append("\"").append(source).append("\";\n");
+    StringBuilder dot = new StringBuilder();
+    dot.append("digraph G {\n");
+    
+    for (String line : Files.readAllLines(Paths.get(filePath))) {
+        line = line.trim();
+        if (line.isEmpty())
+            continue;
+            
+        String[] parts = line.split("->");
+        
+        if (parts.length < 1)
+            continue;
+            
+        String source = parts[0].trim();
+        dot.append("\"").append(source).append("\";\n");
+        
+      
+        if (parts.length == 2 && !parts[1].trim().isEmpty()) {
             String[] targets = parts[1].split(",");
             for (String t : targets) {
                 t = t.trim();
                 if (!t.contains("(") || !t.contains(")"))
                     continue;
                 String target = t.substring(0, t.indexOf("(")).trim();
-                String weight =t.substring( t.indexOf("(") + 1,t.indexOf(")")).trim();
+                String weight = t.substring(t.indexOf("(") + 1, t.indexOf(")")).trim();
                 dot.append("\"").append(source).append("\" -> \"").append(target).append("\" [label=\"").append(weight).append("\"];\n");
             }
         }
-        dot.append("}");
-        File out = new File(outputFile);
-        if (out.getParentFile() != null){
-            out.getParentFile().mkdirs();
-        }
-        Graphviz.fromString(dot.toString()).render(Format.PNG).toFile(out);
     }
+    dot.append("}");
+    File out = new File(outputFile);
+    if (out.getParentFile() != null){
+        out.getParentFile().mkdirs();
+    }
+    Graphviz.fromString(dot.toString()).render(Format.PNG).toFile(out);
+}
 
     public List<Station> shortestPath(Station source,Station destination){
         HashMap<Station,Integer> dist=new HashMap<>();
