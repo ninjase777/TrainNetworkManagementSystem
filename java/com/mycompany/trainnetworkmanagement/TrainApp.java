@@ -272,23 +272,32 @@ public class TrainApp {
         JButton addEdgeBtn = createStyledButton("Add/Update Edge");
         JButton removeEdgeBtn = createStyledButton("Remove Edge");
         addEdgeBtn.addActionListener(e -> {
-            if(edgeSrcCombo.getSelectedItem() == null || edgeDestCombo.getSelectedItem() == null) return;
-            Station src = trainGraph.getStationByName((String) edgeSrcCombo.getSelectedItem());
-            Station dest = trainGraph.getStationByName((String) edgeDestCombo.getSelectedItem());
-            try {
-                int weight = Integer.parseInt(weightField.getText().trim());
-                trainGraph.removeEdge(src, dest);
-                if(trainGraph.addEdge(src, dest, weight)) {
-                    showStatus("Path established/updated successfully.", false);
-                    JOptionPane.showMessageDialog(panel, "Path linked from [" + src.getName() + "] to [" + dest.getName() + "] (" + weight + " km).");
-                    weightField.setText("");
-                    shouldApplyLayout = false;
-                    updateVisualGraph(null);
-                }
-            } catch (NumberFormatException ex) {
-                showStatus("Distance must be a valid integer!", true);
-            }
-        });
+    if(edgeSrcCombo.getSelectedItem() == null || edgeDestCombo.getSelectedItem() == null) return;
+    Station src = trainGraph.getStationByName((String) edgeSrcCombo.getSelectedItem());
+    Station dest = trainGraph.getStationByName((String) edgeDestCombo.getSelectedItem());
+    try {
+        int weight = Integer.parseInt(weightField.getText().trim());
+       
+        
+        if (weight < 0) {
+            showStatus(" Distance cannot be negative!", true);
+            JOptionPane.showMessageDialog(panel, "Error: Distance cannot be negative.", "Invalid Input", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        
+        trainGraph.removeEdge(src, dest);
+        if(trainGraph.addEdge(src, dest, weight)) {
+            showStatus("Path established/updated successfully.", false);
+            JOptionPane.showMessageDialog(panel, "Path linked from [" + src.getName() + "] to [" + dest.getName() + "] (" + weight + " km).");
+        
+            weightField.setText("");
+            shouldApplyLayout = false;
+            updateVisualGraph(null);
+        }
+    } catch (NumberFormatException ex) {
+        showStatus("Distance must be a valid integer!", true);
+    }
+});
 
         removeEdgeBtn.addActionListener(e -> {
             if(edgeSrcCombo.getSelectedItem() == null || edgeDestCombo.getSelectedItem() == null) return;
